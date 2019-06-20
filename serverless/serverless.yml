@@ -1,0 +1,55 @@
+service: api
+
+provider:
+  name: aws
+  timeout: 30 # Because API Gateway
+  runtime: nodejs8.10
+  region: us-east-1
+  stage: dev
+  environment:
+    GIT_HASH: ${opt:hash, 'local'}
+    ENV: ${opt:stage, self:provider.stage}
+
+package:
+  exclude:
+    - .git/**
+
+functions:
+  ping:
+    handler: src/handler.ping
+    memorySize: 128
+    events:
+      - http:
+          path: ping
+          method: get
+          integration: lambda-proxy
+  
+  pingPath:
+    handler: src/handler.pingPath
+    memorySize: 128
+    events:
+      - http:
+          path: path/{id}
+          method: get
+          integration: lambda-proxy
+          request:
+            parameters:
+              paths:
+                id: true
+
+  pingPost:
+    handler: src/handler.pingPost
+    memorySize: 128
+    events:
+      - http:
+          path: post
+          method: post
+          integration: lambda-proxy
+
+plugins:
+  - serverless-offline
+  - serverless-webpack
+
+custom:
+  serverless-offline:
+    host: 0.0.0.0 # for Docker containers
