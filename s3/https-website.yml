@@ -134,7 +134,7 @@ Resources:
     Properties:
       AliasTarget:
         DNSName: !GetAtt CloudFrontWebsite.DomainName
-        HostedZoneId: !Ref HostedZoneId # Cloudfront Hosted Zone ID
+        HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Hosted Zone ID
       Type: A
       HostedZoneName: !Ref SiteUrl
       Name: !Ref SiteUrl
