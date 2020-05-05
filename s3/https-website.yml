@@ -17,33 +17,24 @@ Description: SSL Enabled S3 Website with an optional CloudFront Distribution
 
 Parameters:
 
-  AppName:
-    Description: Application being deployed
+  SiteUrl:
+    Description: Website URL to use
     Type: String
+    Default: blog.medgelabs.io
 
-  EnvName:
-    Description: Which environment do you want to deploy to?
-    Type: String
-  
   DomainName:
     Description: HTTP Domain to register with
     Type: String
+    Default: medgelabs.io
 
-  DeployCloudFront:
-    Description: Should this deploy to the CloudFront CDN?
+  HostedZoneId:
+    Description: HostedZoneId in Route53
     Type: String
-    Default: "false"
-    AllowedValues:
-      - "false"
-      - "true"
-  
+    Default: Z1IKIK8GNXT5E9
+
   SslCertArn:
     Description: ARN of the ACM Certificate to use to enable SSL
     Type: String
-
-Conditions:
-
-  DeployCloudFront: !Not [!Equals [!Ref DeployCloudFront, "false"]]
 
 Resources:
 
@@ -51,16 +42,16 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: LogDeliveryWrite
-      BucketName: !Sub "${EnvName}-${AppName}-logging"
+      BucketName: !Sub "${SiteUrl}-logging"
       LifecycleConfiguration:
         Rules:
-          - ExpirationInDays: 30
+          - ExpirationInDays: 10
             Status: Enabled
 
   WebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "${EnvName}-${AppName}"
+      BucketName: !Ref SiteUrl
       VersioningConfiguration:
         Status: Enabled
       WebsiteConfiguration:
@@ -75,30 +66,27 @@ Resources:
       Bucket: !Ref WebsiteBucket
       PolicyDocument:
         Statement:
-          - 
+          -
             Effect: Allow
             Action:
               - s3:GetObject
             Resource: !Sub "arn:aws:s3:::${WebsiteBucket}/*"
-            Principal: !If 
-              - DeployCloudFront
-              - AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
-              - "*"
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
 
   CloudFrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
-    Condition: DeployCloudFront
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub "${AppName} ${EnvName}"
+        Comment: !Ref SiteUrl
 
   CloudFrontWebsite:
     Type: AWS::CloudFront::Distribution
-    Condition: DeployCloudFront
     Properties:
       DistributionConfig:
         Aliases:
-          - !Sub "${EnvName}-${AppName}.${DomainName}"
+          - !Ref SiteUrl
         Origins:
         - DomainName: !Sub ${WebsiteBucket}.s3.amazonaws.com
           Id: !Ref WebsiteBucket
@@ -106,7 +94,7 @@ Resources:
             OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}
         Enabled: true
         HttpVersion: http2
-        Comment: !Sub "${AppName} ${EnvName}"
+        Comment: !Ref SiteUrl
         DefaultRootObject: index.html
         CustomErrorResponses:
           - ErrorCachingMinTTL: 300
@@ -140,23 +128,22 @@ Resources:
           AcmCertificateArn: !Ref SslCertArn
           SslSupportMethod: sni-only
           MinimumProtocolVersion: TLSv1.1_2016
-  
+
   Route53RecordSetWithCloudFront:
     Type: AWS::Route53::RecordSet
-    Condition: DeployCloudFront
     Properties:
       AliasTarget:
         DNSName: !GetAtt CloudFrontWebsite.DomainName
-        HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Hosted Zone ID
+        HostedZoneId: !Ref HostedZoneId # Cloudfront Hosted Zone ID
       Type: A
-      HostedZoneName: !Sub "${EnvName}.${DomainName}."
-      Name: !Sub "${EnvName}-${AppName}.${DomainName}"
+      HostedZoneName: !Ref SiteUrl
+      Name: !Ref SiteUrl
 
 Outputs:
 
   DomainName:
     Description: URL Domain for the deployed website
-    Value: !Sub "${EnvName}-${AppName}.${DomainName}"
+    Value: !Ref SiteUrl
 
   WebsiteBucketUrl:
     Description: S3 bucket used as the website root
