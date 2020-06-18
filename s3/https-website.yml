@@ -20,17 +20,14 @@ Parameters:
   SiteUrl:
     Description: Website URL to use
     Type: String
-    Default: blog.medgelabs.io
 
   DomainName:
     Description: HTTP Domain to register with
     Type: String
-    Default: medgelabs.io
 
   HostedZoneId:
     Description: HostedZoneId in Route53
     Type: String
-    Default: Z1IKIK8GNXT5E9
 
   SslCertArn:
     Description: ARN of the ACM Certificate to use to enable SSL
@@ -134,7 +131,7 @@ Resources:
     Properties:
       AliasTarget:
         DNSName: !GetAtt CloudFrontWebsite.DomainName
-        HostedZoneId: !Ref HostedZoneId # Cloudfront Hosted Zone ID
+        HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Hosted Zone ID
       Type: A
       HostedZoneName: !Ref SiteUrl
       Name: !Ref SiteUrl
