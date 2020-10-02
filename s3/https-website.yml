@@ -1,5 +1,6 @@
 ---
-# Purpose: CloudFormation Template to create S3 Hosted Website
+# CloudFormation Template to create an S3 Hosted Website with SSL through
+# CloudFront
 #
 # Assumes the following are already created:
 #  - Route53 Hosted Zones be created if doing a CloudFront distribution
@@ -9,10 +10,6 @@
 # 1) The Website bucket where the static files will live
 # 2) The CloudFront distribution which serves the static assets over CDN
 # 3) The Route53 DNS record set for your custom domain.
-#
-# The final Route53 name is currently the join of "${EnvName}-${AppName}.${DomainName}"
-#
-# NOTE - a CloudFront distribution is a very long deployment process (+/- 1 hour)
 Description: SSL Enabled S3 Website with an optional CloudFront Distribution
 
 Parameters:
@@ -71,6 +68,27 @@ Resources:
             Principal:
               AWS:
                 - !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
+
+  DeployUserPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub "S3 Deployment Policy for ${SiteUrl}"
+      Path: /
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource: !Sub "arn:aws:s3:::${WebsiteBucket}"
+          -
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !Sub "arn:aws:s3:::${WebsiteBucket}/*"
 
   CloudFrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
